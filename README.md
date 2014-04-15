@@ -121,15 +121,13 @@ func main() {
 
 ## Links
 
- - [API documentation](http://visionmedia.github.com/commander.js/)
- - [progress bars](https://github.com/cheggaaa/pb)
- - [terminal](https://github.com/wsxiaoys/terminal)
+ - API documentation
 
-## License 
+## License
 
 (The MIT License)
 
-Copyright (c) 2013 Iain Shigeoka
+Copyright (c) 2014 Iain Shigeoka
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
