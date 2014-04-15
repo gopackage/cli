@@ -165,7 +165,7 @@ func (s *CommandSuite) TestParseOptions(c *C) {
 
 func (s *CommandSuite) TestParseArgs(c *C) {
 	program := New()
-	program.SetDesciption("Device troubleshooting tool")
+	program.SetDescription("Device troubleshooting tool")
 
 	program.Option("-v, --verbose", "display verbose information")
 

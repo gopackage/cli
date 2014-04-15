@@ -8,7 +8,7 @@ import (
 func main() {
 	program := cli.New()
 	program.SetName("Device Tool")
-	program.SetDesciption("Device troubleshooting tool")
+	program.SetDescription("Device troubleshooting tool")
 	program.SetVersion("0.1")
 
 	program.Option("-v, --verbose", "display verbose information", "")

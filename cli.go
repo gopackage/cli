@@ -8,11 +8,12 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"strconv"
 )
 
 type Program struct {
 	Version        string
-	Name 			string
+	Name           string
 	Description    string
 	Exe            string
 	Execs          map[string]string
@@ -20,12 +21,15 @@ type Program struct {
 	Commands       map[string]*Command
 	Options        map[string]*Option
 	Topics         map[string]*Topic
-	Help           func(p *Program)
 	RunningCommand *exec.Cmd
+
+	// Terminal attached to this program
+	Terminal *Terminal
 }
 
 func New() *Program {
-	program := &Program{Help: HelpPrinter, Commands: map[string]*Command{}, Options: map[string]*Option{}, Topics: map[string]*Topic{}}
+	program := &Program{Commands: map[string]*Command{}, Options: map[string]*Option{}, Topics: map[string]*Topic{}}
+	program.Terminal = NewTerminal(program)
 	return program
 }
 
@@ -36,7 +40,7 @@ func (p *Program) SetName(name string) *Program {
 }
 
 // Set short program description for help summary.
-func (p *Program) SetDesciption(description string) *Program {
+func (p *Program) SetDescription(description string) *Program {
 	p.Description = description
 	return p
 }
@@ -73,11 +77,6 @@ func (p *Program) SetVersion(version string, command ...string) *Program {
 		}
 		fmt.Printf("%s -- v %s\n\n", name, p.Version)
 	})
-	return p
-}
-
-func (p *Program) SetHelp(help func(p *Program)) *Program {
-	p.Help = help
 	return p
 }
 
@@ -129,12 +128,8 @@ func (p *Program) parseMainArgs(argv []string) *Command {
 			if help.Action != nil {
 				help.Action(p, help, unknown)
 			}
-		} else if help, ok := p.Commands["help"]; ok {
-			if help.Action != nil {
-				help.Action(p, help, unknown)
-			}
 		} else {
-			// Silently finish?
+			p.Help()
 		}
 	} else {
 		if _, ok := p.Execs[result.Command]; ok {
@@ -150,11 +145,11 @@ func (p *Program) executeSubCommand(argv, args, unknown []string) (cmd *Command)
 	args = append(args, unknown...)
 
 	if len(args) == 0 {
-		p.help()
+		p.Help()
 	}
 
 	if "help" == args[0] && 1 == len(args) {
-		p.help()
+		p.Help()
 	}
 
 	// <cmd> --help
@@ -239,7 +234,7 @@ func (p *Program) parseArgs(args, unknown []string) (command *Command) {
 	}
 	// Set up the remaining command args
 	if command != nil {
-		args = args[1:]		
+		args = args[1:]
 		for _, arg := range command.Args {
 			if len(args) > 0 {
 				arg.Value = args[0]
@@ -295,7 +290,7 @@ func (p *Program) parseOptions(argv []string) (args, unknownOptions []string) {
 
 		// option is defined
 		if option != nil {
-			if option.Required { 			// requires arg
+			if option.Required { // requires arg
 				i++
 				if len(argv) < i {
 					p.optionMissingArgument(option, "")
@@ -305,7 +300,7 @@ func (p *Program) parseOptions(argv []string) (args, unknownOptions []string) {
 					p.optionMissingArgument(option, arg)
 				}
 				option.Value = arg
-			} else if option.Optional {		// optional arg
+			} else if option.Optional { // optional arg
 				if len(argv) > i+1 {
 					arg = argv[i+1]
 					if "" == arg || ("-" == arg[0:1] && "-" != arg) {
@@ -364,7 +359,7 @@ func (p *Program) optionMissingArgument(option *Option, flag string) {
 }
 
 // Unknown command argument
-// 
+//
 // @param {String} cmd
 // @param {String} arg
 func (p *Program) unknownArgument(cmd, arg string) {
@@ -391,16 +386,24 @@ func (p *Program) unknownOption(flag string) {
 func (p *Program) outputHelpIfNecessary(cmd string, options []string) {
 	for _, option := range options {
 		if option == "--help" || option == "-h" {
-			p.help()
-			os.Exit(0)
+			p.Help()
 		}
 	}
 }
 
-// Display help message
-func (p *Program) help() {
-	// TBD
-	fmt.Println("TBD display help message")
+// Display help message (does not exit)
+func (p *Program) PrintHelp() {
+	if help, ok := p.Commands["help"]; ok {
+		if help.Action != nil {
+			help.Action(p, help, []string{})
+		}
+	}
+}
+
+// Display help message and exit
+func (p *Program) Help() {
+	p.PrintHelp()
+	os.Exit(0)
 }
 
 // -----------------------------------------------------------------------
@@ -421,16 +424,10 @@ type Command struct {
 	Command     string
 	Flags       string
 	Description string
-	Body string
+	Body        string
 	Args        []*Arg
 	Options     []*Option
 	Action      CommandAction
-}
-
-type Arg struct {
-	Required bool
-	Name     string
-	Value string
 }
 
 func (c *Command) Option(flags, description string, defaultValue ...string) *Command {
@@ -465,6 +462,24 @@ func (c *Command) SetBody(body string) *Command {
 func (c *Command) SetAction(action CommandAction) *Command {
 	c.Action = action
 	return c
+}
+
+type Arg struct {
+	Required bool
+	Name     string
+	Value    string
+}
+
+// Retrieve the current value of the Arg as an int - if the value isn't parseable, the provided default is returned
+func (a *Arg) IntValue(defaultValue int) int {
+	if a.Value == "" {
+		return defaultValue
+	}
+	intVal, err := strconv.ParseInt(a.Value, 0, 0)
+	if err != nil {
+		return defaultValue
+	}
+	return (int)(intVal)
 }
 
 // -----------------------------------------------------------------------
