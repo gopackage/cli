@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/IainShigeoka/cli"
+	"github.com/badslug/cli"
 )
 
 func main() {

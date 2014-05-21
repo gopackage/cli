@@ -1,187 +1,231 @@
-// 2013 Iain Shigeoka - BSD license (see LICENSE)
-package cli
+// 2014 Iain Shigeoka - BSD license (see LICENSE)
+package cli_test
 
 import (
-	. "launchpad.net/gocheck"
-	"testing"
+	. "github.com/IainShigeoka/cli"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-// Hook up gocheck into "go test" runner.
-func Test(t *testing.T) { TestingT(t) }
+var _ = Describe("Argument Parsing", func() {
 
-type CommandSuite struct{}
+	BeforeEach(func() {
+		// Nothing to do yet
+	})
 
-var _ = Suite(&CommandSuite{})
+	Describe("Option parsing", func() {
+		Context("with a single short option flag", func() {
+			option := NewOption(nil, "-v", "display version information")
+			It("should have a short but no long option", func() {
+				Ω(option.Short).Should(Equal("-v"))
+				Ω(option.Long).Should(Equal(""))
+				Ω(option.Required).Should(BeFalse())
+				Ω(option.Optional).Should(Equal(false))
+				Ω(option.Bool).Should(Equal(false))
+				Ω(option.Description).Should(Equal("display version information"))
+			})
+		})
+		Context("with short and long option flag", func() {
+			option := NewOption(nil, "-v, --version", "display version information")
+			It("should have both short and long options", func() {
+				Ω(option.Short).Should(Equal("-v"))
+				Ω(option.Long).Should(Equal("--version"))
+				Ω(option.Required).Should(Equal(false))
+				Ω(option.Optional).Should(Equal(false))
+				Ω(option.Bool).Should(Equal(false))
+				Ω(option.Description).Should(Equal("display version information"))
 
-func (s *CommandSuite) TestOptions(c *C) {
-	option := NewOption(nil, "-v", "display version information")
+			})
+		})
+		Context("with a required option parameter", func() {
+			option := NewOption(nil, "-c, --config <path>", "set configuration file")
+			It("should require an option parameter", func() {
+				Ω(option.Short).Should(Equal("-c"))
+				Ω(option.Long).Should(Equal("--config"))
+				Ω(option.Required).Should(Equal(true))
+				Ω(option.Optional).Should(Equal(false))
+				Ω(option.Bool).Should(Equal(false))
+				Ω(option.Description).Should(Equal("set configuration file"))
+			})
+		})
+		Context("with an optional option parameter", func() {
+			option := NewOption(nil, "-c, --config [path]", "set configuration file")
+			It("should support the optional parameter", func() {
+				Ω(option.Short).Should(Equal("-c"))
+				Ω(option.Long).Should(Equal("--config"))
+				Ω(option.Required).Should(Equal(false))
+				Ω(option.Optional).Should(Equal(true))
+				Ω(option.Bool).Should(Equal(false))
+				Ω(option.Description).Should(Equal("set configuration file"))
+			})
+		})
+		Context("with an option flag (bool)", func() {
+			option := NewOption(nil, "-T, --no-tests", "ignore tests")
+			It("should contain a flag option", func() {
+				Ω(option.Short).Should(Equal("-T"))
+				Ω(option.Long).Should(Equal("--no-tests"))
+				Ω(option.Required).Should(Equal(false))
+				Ω(option.Optional).Should(Equal(false))
+				Ω(option.Bool).Should(Equal(true))
+				Ω(option.Description).Should(Equal("ignore tests"))
+			})
+		})
+	})
 
-	c.Check(option.Short, Equals, "-v")
-	c.Check(option.Long, Equals, "")
-	c.Check(option.Required, Equals, false)
-	c.Check(option.Optional, Equals, false)
-	c.Check(option.Bool, Equals, false)
-	c.Check(option.Description, Equals, "display version information")
+	Describe("Command parsing", func() {
+		Context("with a simple command", func() {
+			command := NewCommand(nil, "foo", "bar")
+			It("should not expect parameters", func() {
+				Ω(command.Command).Should(Equal("foo"))
+				Ω(command.Description).Should(Equal("bar"))
+			})
+		})
+		Context("with a required parameter", func() {
+			command := NewCommand(nil, "foo <bar>", "a foo bar command")
+			It("should require a single parameter", func() {
+				Ω(command.Command).Should(Equal("foo"))
+				Ω(len(command.Args)).Should(Equal(1))
+				Ω(command.Args[0].Name).Should(Equal("bar"))
+				Ω(command.Args[0].Required).Should(Equal(true))
+				Ω(command.Description).Should(Equal("a foo bar command"))
+			})
+		})
+		Context("with an optional parameter", func() {
+			command := NewCommand(nil, "foo [bar]", "a foo bar command")
+			It("should support an optional parameter", func() {
+				Ω(command.Command).Should(Equal("foo"))
+				Ω(len(command.Args)).Should(Equal(1))
+				Ω(command.Args[0].Name).Should(Equal("bar"))
+				Ω(command.Args[0].Required).Should(Equal(false))
+				Ω(command.Description).Should(Equal("a foo bar command"))
+			})
+		})
+	})
+	Describe("Normalizing arguments", func() {
+		Context("with a simple string", func() {
+			normalized := Normalize([]string{"help"})
+			It("should return the string", func() {
+				Ω(len(normalized)).Should(Equal(1))
+				Ω(normalized[0]).Should(Equal("help"))
+			})
+		})
+		Context("with a single short option", func() {
+			normalized := Normalize([]string{"-v"})
+			It("should return the option", func() {
+				Ω(len(normalized)).Should(Equal(1))
+				Ω(normalized[0]).Should(Equal("-v"))
+			})
+		})
+		Context("with a single long option", func() {
+			normalized := Normalize([]string{"--version"})
+			It("should return the option", func() {
+				Ω(len(normalized)).Should(Equal(1))
+				Ω(normalized[0]).Should(Equal("--version"))
+			})
+		})
+		Context("with three short options together", func() {
+			normalized := Normalize([]string{"-abc"})
+			It("should return the three short options separately", func() {
+				Ω(len(normalized)).Should(Equal(3))
+				Ω(normalized[0]).Should(Equal("-a"))
+				Ω(normalized[1]).Should(Equal("-b"))
+				Ω(normalized[2]).Should(Equal("-c"))
+			})
+		})
+		Context("with an option and parameter", func() {
+			normalized := Normalize([]string{"--port", "8080"})
+			It("should return the long option and parameter separately", func() {
+				Ω(len(normalized)).Should(Equal(2))
+				Ω(normalized[0]).Should(Equal("--port"))
+				Ω(normalized[1]).Should(Equal("8080"))
+			})
+		})
+		Context("with an option and parameter connected with an '='", func() {
+			normalized := Normalize([]string{"--port=8080"})
+			It("should return the long option and parameter separately", func() {
+				Ω(len(normalized)).Should(Equal(2))
+				Ω(normalized[0]).Should(Equal("--port"))
+				Ω(normalized[1]).Should(Equal("8080"))
+			})
+		})
+	})
+	Describe("OptionFor", func() {
+		Context("with a single option added", func() {
+			program := New()
+			It("should retrieve options by short and long flags", func() {
+				option := program.OptionFor("-v")
+				Ω(option).Should(BeNil())
 
-	option = NewOption(nil, "-v, --version", "display version information")
+				program.Option("-v, --version", "display option")
 
-	c.Check(option.Short, Equals, "-v")
-	c.Check(option.Long, Equals, "--version")
-	c.Check(option.Required, Equals, false)
-	c.Check(option.Optional, Equals, false)
-	c.Check(option.Bool, Equals, false)
-	c.Check(option.Description, Equals, "display version information")
+				option = program.OptionFor("-v")
+				Ω(option.Name).Should(Equal("version"))
 
-	option = NewOption(nil, "-c, --config <path>", "set configuration file")
+				option = program.OptionFor("--version")
+				Ω(option.Name).Should(Equal("version"))
 
-	c.Check(option.Short, Equals, "-c")
-	c.Check(option.Long, Equals, "--config")
-	c.Check(option.Required, Equals, true)
-	c.Check(option.Optional, Equals, false)
-	c.Check(option.Bool, Equals, false)
-	c.Check(option.Description, Equals, "set configuration file")
+				option = program.OptionFor("-f")
+				Ω(option).Should(BeNil())
+				option = program.OptionFor("--foo")
+				Ω(option).Should(BeNil())
+			})
+		})
+	})
+	Describe("ParseOptions", func() {
+		Context("with an argument and no configured options", func() {
+			program := New()
+			args, unknown := program.ParseOptions([]string{"help"})
+			It("should leave the argument as-is (left in args[])", func() {
+				Ω(len(args)).Should(Equal(1))
+				Ω(args[0]).Should(Equal("help"))
+				Ω(len(unknown)).Should(Equal(0))
+			})
+		})
+		Context("with a long option and no configured options", func() {
+			program := New()
+			args, unknown := program.ParseOptions([]string{"--foo"})
+			It("should not match the option (add to unknown[] list)", func() {
+				Ω(len(args)).Should(Equal(0))
+				Ω(len(unknown)).Should(Equal(1))
+				Ω(unknown[0]).Should(Equal("--foo"))
+			})
+		})
+		Context("with a long option that matches a configured option", func() {
+			program := New()
+			program.Option("-f, --foo", "add a foo", "")
+			args, unknown := program.ParseOptions([]string{"--foo"})
+			option := program.OptionFor("--foo")
+			It("should match the option", func() {
+				Ω(len(args)).Should(Equal(0))
+				Ω(len(unknown)).Should(Equal(0))
+				Ω(option.Value).Should(Equal("true"))
+			})
+		})
+	})
+	Describe("ParseNormalizedArgs", func() {
+		Context("with a configured program", func() {
 
-	option = NewOption(nil, "-c, --config [path]", "set configuration file")
+			program := New()
+			program.SetDescription("Device troubleshooting tool")
+			program.Option("-v, --verbose", "display verbose information")
+			program.Command("tcp <port>", "capture TCP packets on <port>").Option("-h, --host", "host address to bind to")
+			program.Topic("path", "setting the path for reading")
 
-	c.Check(option.Short, Equals, "-c")
-	c.Check(option.Long, Equals, "--config")
-	c.Check(option.Required, Equals, false)
-	c.Check(option.Optional, Equals, true)
-	c.Check(option.Bool, Equals, false)
-	c.Check(option.Description, Equals, "set configuration file")
+			It("should not match unrecognized 'help' command", func() {
+				command := program.ParseNormalizedArgs([]string{"help"}, []string{})
 
-	option = NewOption(nil, "-T, --no-tests", "ignore tests")
+				Ω(command).Should(BeNil())
+			})
+			It("should parse command with required argument", func() {
 
-	c.Check(option.Short, Equals, "-T")
-	c.Check(option.Long, Equals, "--no-tests")
-	c.Check(option.Required, Equals, false)
-	c.Check(option.Optional, Equals, false)
-	c.Check(option.Bool, Equals, true)
-	c.Check(option.Description, Equals, "ignore tests")
-}
+				command := program.ParseNormalizedArgs([]string{"tcp", "8080"}, []string{})
 
-func (s *CommandSuite) TestCommands(c *C) {
-	command := NewCommand(nil, "foo", "bar")
+				Ω(command.Command).Should(Equal("tcp"))
+				Ω(len(command.Args)).Should(Equal(1))
+				Ω(command.Args[0].Name).Should(Equal("port"))
+				Ω(command.Args[0].Value).Should(Equal("8080"))
+			})
+		})
+	})
 
-	c.Check(command.Command, Equals, "foo")
-	c.Check(command.Description, Equals, "bar")
-
-	command = NewCommand(nil, "foo <bar>", "a foo bar command")
-
-	c.Check(command.Command, Equals, "foo")
-	c.Check(command.Args, HasLen, 1)
-	c.Check(command.Args[0].Name, Equals, "bar")
-	c.Check(command.Args[0].Required, Equals, true)
-	c.Check(command.Description, Equals, "a foo bar command")
-
-	command = NewCommand(nil, "foo [bar]", "a foo bar command")
-
-	c.Check(command.Command, Equals, "foo")
-	c.Check(command.Args, HasLen, 1)
-	c.Check(command.Args[0].Name, Equals, "bar")
-	c.Check(command.Args[0].Required, Equals, false)
-	c.Check(command.Description, Equals, "a foo bar command")
-}
-
-func (s *CommandSuite) TestNormalizeArgs(c *C) {
-	program := New()
-
-	normalized := program.normalize([]string{"help"})
-
-	c.Assert(normalized, HasLen, 1)
-	c.Check(normalized[0], Equals, "help")
-
-	normalized = program.normalize([]string{"-v"})
-
-	c.Assert(normalized, HasLen, 1)
-	c.Check(normalized[0], Equals, "-v")
-
-	normalized = program.normalize([]string{"--version"})
-
-	c.Assert(normalized, HasLen, 1)
-	c.Check(normalized[0], Equals, "--version")
-
-	normalized = program.normalize([]string{"-abc"})
-
-	c.Assert(normalized, HasLen, 3)
-	c.Check(normalized[0], Equals, "-a")
-	c.Check(normalized[1], Equals, "-b")
-	c.Check(normalized[2], Equals, "-c")
-
-	normalized = program.normalize([]string{"--port", "8080"})
-
-	c.Assert(normalized, HasLen, 2)
-	c.Check(normalized[0], Equals, "--port")
-	c.Check(normalized[1], Equals, "8080")
-
-	normalized = program.normalize([]string{"--port=8080"})
-
-	c.Assert(normalized, HasLen, 2)
-	c.Check(normalized[0], Equals, "--port")
-	c.Check(normalized[1], Equals, "8080")
-}
-
-func (s *CommandSuite) TestOptionFor(c *C) {
-	program := New()
-
-	option := program.optionFor("-v")
-	c.Check(option, IsNil)
-
-	program.Option("-v, --version", "display option")
-
-	option = program.optionFor("-v")
-	c.Check(option.Name, Equals, "version")
-
-	option = program.optionFor("--version")
-	c.Check(option.Name, Equals, "version")
-
-	option = program.optionFor("-f")
-	c.Check(option, IsNil)
-	option = program.optionFor("--foo")
-	c.Check(option, IsNil)
-}
-
-func (s *CommandSuite) TestParseOptions(c *C) {
-	program := New()
-	args, unknown := program.parseOptions([]string{"help"})
-
-	c.Assert(args, HasLen, 1)
-	c.Check(args[0], Equals, "help")
-	c.Assert(unknown, HasLen, 0)
-
-	args, unknown = program.parseOptions([]string{"--foo"})
-
-	c.Assert(args, HasLen, 0)
-	c.Assert(unknown, HasLen, 1)
-	c.Check(unknown[0], Equals, "--foo")
-
-	program.Option("-f, --foo", "add a foo", "")
-
-	args, unknown = program.parseOptions([]string{"--foo"})
-
-	c.Assert(args, HasLen, 0)
-	c.Assert(unknown, HasLen, 0)
-}
-
-func (s *CommandSuite) TestParseArgs(c *C) {
-	program := New()
-	program.SetDescription("Device troubleshooting tool")
-
-	program.Option("-v, --verbose", "display verbose information")
-
-	program.Command("tcp <port>", "capture TCP packets on <port>").Option("-h, --host", "host address to bind to")
-
-	program.Topic("path", "setting the path for reading")
-
-	command := program.parseArgs([]string{"help"}, []string{})
-
-	c.Assert(command, IsNil)
-
-	command = program.parseArgs([]string{"tcp", "8080"}, []string{})
-
-	c.Assert(command, NotNil)
-	c.Check(command.Command, Equals, "tcp")
-	c.Assert(command.Args, HasLen, 1)
-	c.Check(command.Args[0].Name, Equals, "port")
-	c.Check(command.Args[0].Value, Equals, "8080")
-}
+})

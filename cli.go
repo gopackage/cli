@@ -1,4 +1,4 @@
-// 2013 Iain Shigeoka - BSD license (see LICENSE)
+// 2014 Iain Shigeoka - BSD license (see LICENSE)
 package cli
 
 import (
@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type Program struct {
@@ -101,10 +101,10 @@ func (p *Program) Topic(topic, description string) *Topic {
 }
 
 func (p *Program) Parse() *Command {
-	return p.parseMainArgs(os.Args)
+	return p.ParseArgs(os.Args)
 }
 
-func (p *Program) parseMainArgs(argv []string) *Command {
+func (p *Program) ParseArgs(argv []string) *Command {
 	// Add implicit help command if there isn't one set
 	if _, ok := p.Commands["help"]; !ok {
 		helpCommand := NewCommand(p, "help [cmd]", "display help for [cmd]")
@@ -116,10 +116,10 @@ func (p *Program) parseMainArgs(argv []string) *Command {
 	p.Exe = path.Base(argv[0])
 
 	// process argv
-	args, unknown := p.parseOptions(p.normalize(argv[1:]))
+	args, unknown := p.ParseOptions(Normalize(argv[1:]))
 	p.Args = args
 
-	result := p.parseArgs(p.Args, unknown)
+	result := p.ParseNormalizedArgs(p.Args, unknown)
 
 	// executable sub-commands
 	if result == nil {
@@ -191,7 +191,7 @@ func (p *Program) executeSubCommand(argv, args, unknown []string) (cmd *Command)
 // Normalize `args`, splitting joined short flags. For example
 // the arg "-abc" is equivalent to "-a -b -c".
 // This also normalizes equal sign and splits "--abc=def" into "--abc def".
-func (p *Program) normalize(args []string) (normalized []string) {
+func Normalize(args []string) (normalized []string) {
 
 	for _, arg := range args {
 		if len(arg) > 1 && "-" == arg[0:1] && "-" != arg[1:2] {
@@ -214,7 +214,7 @@ func (p *Program) normalize(args []string) (normalized []string) {
 //
 // @param {Array} args
 // @return {Command} for chaining
-func (p *Program) parseArgs(args, unknown []string) (command *Command) {
+func (p *Program) ParseNormalizedArgs(args, unknown []string) (command *Command) {
 	if len(args) > 0 {
 		name := args[0]
 		var ok bool
@@ -222,6 +222,7 @@ func (p *Program) parseArgs(args, unknown []string) (command *Command) {
 		} else if command, ok = p.Commands["*"]; ok {
 		} else {
 			p.outputHelpIfNecessary(name, unknown)
+			return
 		}
 	} else {
 		p.outputHelpIfNecessary("", unknown)
@@ -230,6 +231,7 @@ func (p *Program) parseArgs(args, unknown []string) (command *Command) {
 		// then they are extraneous and we need to error.
 		if len(unknown) > 0 {
 			p.unknownOption(unknown[0])
+			return
 		}
 	}
 	// Set up the remaining command args
@@ -257,7 +259,7 @@ func (p *Program) parseArgs(args, unknown []string) (command *Command) {
 //
 // @param {String} arg
 // @return {Option}
-func (p *Program) optionFor(arg string) *Option {
+func (p *Program) OptionFor(arg string) *Option {
 	for _, option := range p.Options {
 		if option.Short == arg || option.Long == arg {
 			return option
@@ -270,7 +272,7 @@ func (p *Program) optionFor(arg string) *Option {
 //
 // @param {Array} argv
 // @return {Array}
-func (p *Program) parseOptions(argv []string) (args, unknownOptions []string) {
+func (p *Program) ParseOptions(argv []string) (args, unknownOptions []string) {
 	literal := false
 
 	// parse options
@@ -286,7 +288,7 @@ func (p *Program) parseOptions(argv []string) (args, unknownOptions []string) {
 			continue
 		}
 		// find matching Option
-		option := p.optionFor(arg)
+		option := p.OptionFor(arg)
 
 		// option is defined
 		if option != nil {
@@ -371,7 +373,7 @@ func (p *Program) unknownArgument(cmd, arg string) {
 //
 // @param {String} flag
 func (p *Program) unknownOption(flag string) {
-	fmt.Fprint(os.Stderr, "\n  error: unknown option `%s'\n\n", flag)
+	fmt.Fprintf(os.Stderr, "\n  error: unknown option `%s'\n\n", flag)
 	os.Exit(1)
 }
 

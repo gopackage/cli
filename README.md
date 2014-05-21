@@ -123,6 +123,17 @@ func main() {
 
  - API documentation
 
+# Developers
+
+Command line processing is implemented in `cli.go` and terminal tools in
+`terminal.go`.
+
+## Testing
+
+Tests use [Gomega](http://github.com/onsi/gomega) and the
+[Ginkgo](http://github.com/onsi/ginkgo) assertion library. Tests can be
+run using the standard Go testing functionality `go test .`
+
 ## License
 
 (The MIT License)

@@ -1,4 +1,4 @@
-// 2013 Iain Shigeoka - BSD license (see LICENSE)
+// 2014 Iain Shigeoka - BSD license (see LICENSE)
 package cli
 
 import (
