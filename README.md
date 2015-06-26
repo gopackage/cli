@@ -4,7 +4,7 @@
 
 ## Installation
 
-    $ go get github.com/IainShigeoka/cli
+    $ go get github.com/gopackage/cli
 
 ## Option parsing
 
@@ -15,7 +15,7 @@ package main
 
 import (
   "fmt"
-  "github.com/IainShigeoka/cli"
+  "github.com/gopackage/cli"
 )
 
 func main() {
@@ -63,7 +63,7 @@ package main
 
 import (
   "fmt"
-  "github.com/IainShigeoka/cli"
+  "github.com/gopackage/cli"
 )
 
 func main() {
@@ -94,7 +94,7 @@ package main
 
 import (
   "fmt"
-  "github.com/IainShigeoka/cli"
+  "github.com/gopackage/cli"
 )
 
 func main() {
