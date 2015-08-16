@@ -1,4 +1,3 @@
-// 2014 Iain Shigeoka - BSD license (see LICENSE)
 package cli
 
 import (
@@ -11,6 +10,9 @@ import (
 	"strings"
 )
 
+// Program captures all the information about command line options and
+// command syntax. The Program is configured, then Parse() is called to
+// trigger program execution.
 type Program struct {
 	Version        string
 	Name           string
@@ -27,25 +29,26 @@ type Program struct {
 	Terminal *Terminal
 }
 
+// New creates a new command line program.
 func New() *Program {
 	program := &Program{Commands: map[string]*Command{}, Options: map[string]*Option{}, Topics: map[string]*Topic{}}
 	program.Terminal = NewTerminal(program)
 	return program
 }
 
-// Set program "pretty name" used in version reporting.
+// SetName configures the program "pretty name" used in version reporting.
 func (p *Program) SetName(name string) *Program {
 	p.Name = name
 	return p
 }
 
-// Set short program description for help summary.
+// SetDescription sets the short program description for help summary.
 func (p *Program) SetDescription(description string) *Program {
 	p.Description = description
 	return p
 }
 
-// Set the program version to `version`.
+// SetVersion sets the program version to `version`.
 //
 // This method auto-registers the "version" command
 // which will print the version number when passed.
@@ -80,12 +83,14 @@ func (p *Program) SetVersion(version string, command ...string) *Program {
 	return p
 }
 
+// Option adds an option with help message information.
 func (p *Program) Option(flags, description string, defaultValue ...string) *Program {
 	o := NewOption(p, flags, description, defaultValue...)
 	p.Options[flags] = o
 	return p
 }
 
+// Command adds a command/mode for the program to execute.
 func (p *Program) Command(command, description string) *Command {
 
 	c := NewCommand(p, command, description)
@@ -94,16 +99,24 @@ func (p *Program) Command(command, description string) *Command {
 	return c
 }
 
+// Topic adds a help topic to the program (information without a corresponding)
+// program execution.
 func (p *Program) Topic(topic, description string) *Topic {
 	t := &Topic{Program: p, Topic: topic, Description: description}
 	p.Topics[topic] = t
 	return t
 }
 
+// Parse begins command line argument parsing and returns the command that
+// the user selected for execution. If no command was selected the command
+// will be nil and Help() will be displayed.
 func (p *Program) Parse() *Command {
 	return p.ParseArgs(os.Args)
 }
 
+// ParseArgs parses the provided list of command line arguments instead of
+// automatically pulling them from `os.Args`. Useful for testing.
+// See Parse for details.
 func (p *Program) ParseArgs(argv []string) *Command {
 	// Add implicit help command if there isn't one set
 	if _, ok := p.Commands["help"]; !ok {
@@ -199,7 +212,7 @@ func Normalize(args []string) (normalized []string) {
 				flag := "-" + string(c)
 				normalized = append(normalized, flag)
 			}
-		} else if "--" == arg[0:2] && strings.Contains(arg, "=") {
+		} else if len(arg) > 1 && "--" == arg[0:2] && strings.Contains(arg, "=") {
 			index := strings.Index(arg, "=")
 			normalized = append(normalized, arg[0:index])
 			normalized = append(normalized, arg[index+1:])
@@ -210,7 +223,8 @@ func Normalize(args []string) (normalized []string) {
 	return
 }
 
-// Parse command `args`.
+// ParseNormalizedArgs parses command line `args` and selects a command based
+// on program settings and the arguments.
 //
 // @param {Array} args
 // @return {Command} for chaining
@@ -255,7 +269,7 @@ func (p *Program) ParseNormalizedArgs(args, unknown []string) (command *Command)
 	return
 }
 
-// Return an option matching `arg` if any.
+// OptionFor returns an option matching `arg` if any.
 //
 // @param {String} arg
 // @return {Option}
@@ -268,7 +282,7 @@ func (p *Program) OptionFor(arg string) *Option {
 	return nil
 }
 
-// Parse options from `argv` returning `argv` void of these options.
+// ParseOptions parses options from `argv` returning `argv` void of these options.
 //
 // @param {Array} argv
 // @return {Array}
@@ -393,7 +407,7 @@ func (p *Program) outputHelpIfNecessary(cmd string, options []string) {
 	}
 }
 
-// Display help message (does not exit)
+// PrintHelp displays help message (does not exit).
 func (p *Program) PrintHelp() {
 	if help, ok := p.Commands["help"]; ok {
 		if help.Action != nil {
@@ -402,7 +416,7 @@ func (p *Program) PrintHelp() {
 	}
 }
 
-// Display help message and exit
+// Help displays help message and exits.
 func (p *Program) Help() {
 	p.PrintHelp()
 	os.Exit(0)
@@ -410,6 +424,7 @@ func (p *Program) Help() {
 
 // -----------------------------------------------------------------------
 
+// NewCommand creates a new command for a given program.
 func NewCommand(program *Program, command, description string) *Command {
 	c := &Command{Program: program, Description: description}
 	c.Flags = command
@@ -419,8 +434,14 @@ func NewCommand(program *Program, command, description string) *Command {
 	return c
 }
 
+// CommandAction is implemented by any function wanting to be called when
+// a command is selected on the command line.
 type CommandAction func(program *Program, command *Command, unknownArgs []string)
 
+// Command captures information about a cli command that the user wishes
+// to select/execute. Each command can have its own set of unique options.
+// When a command is selected as part of Program.Parse() any CommandActions
+// associated with the command are executed in the main thread.
 type Command struct {
 	Program     *Program
 	Command     string
@@ -432,6 +453,8 @@ type Command struct {
 	Action      CommandAction
 }
 
+// Option captures information about a cli option (denoted by a `-` or long `--`
+// prefix). We accept flags that look like `--flag=foo` or `-f foo`.
 func (c *Command) Option(flags, description string, defaultValue ...string) *Command {
 	o := NewOption(c.Program, flags, description, defaultValue...)
 	c.Options = append(c.Options, o)
@@ -456,23 +479,27 @@ func (c *Command) parseExpectedArgs(args []string) {
 	}
 }
 
+// SetBody configures the body text of a command help description.
 func (c *Command) SetBody(body string) *Command {
 	c.Body = body
 	return c
 }
 
+// SetAction sets the action associated with the command.
 func (c *Command) SetAction(action CommandAction) *Command {
 	c.Action = action
 	return c
 }
 
+// Arg captures command line arguments that the program expects.
 type Arg struct {
 	Required bool
 	Name     string
 	Value    string
 }
 
-// Retrieve the current value of the Arg as an int - if the value isn't parseable, the provided default is returned
+// IntValue retrieves the current value of the Arg as an int -
+// if the value isn't parseable, the provided default is returned
 func (a *Arg) IntValue(defaultValue int) int {
 	if a.Value == "" {
 		return defaultValue
@@ -486,6 +513,8 @@ func (a *Arg) IntValue(defaultValue int) int {
 
 // -----------------------------------------------------------------------
 
+// Option represents a command line option with both short and long flag formats
+// supported.
 type Option struct {
 	Program     *Program
 	Flags       string
@@ -500,6 +529,7 @@ type Option struct {
 	Default     string
 }
 
+// NewOption creates a new option.
 func NewOption(program *Program, flags, description string, defaultValue ...string) *Option {
 	option := &Option{Program: program}
 	option.Flags = flags
@@ -521,6 +551,8 @@ func NewOption(program *Program, flags, description string, defaultValue ...stri
 
 // -----------------------------------------------------------------------
 
+// Topic represents a help topic that has no corresponding command (only used
+// by the `help` built in command).
 type Topic struct {
 	Program     *Program
 	Description string
@@ -528,11 +560,13 @@ type Topic struct {
 	Body        string
 }
 
+// SetDescription sets the help topic description.
 func (t *Topic) SetDescription(description string) *Topic {
 	t.Description = description
 	return t
 }
 
+// SetBody sets the help topic body text.
 func (t *Topic) SetBody(body string) *Topic {
 	t.Body = body
 	return t
@@ -540,6 +574,9 @@ func (t *Topic) SetBody(body string) *Topic {
 
 // -----------------------------------------------------------------------
 
+// HelpAction is a default action used by cli to print out the standard
+// Help() message. The action can be replaced by a user-supplied implementation
+// to override the default behavior/format.
 func HelpAction(program *Program, command *Command, unknownArgs []string) {
 	// Print help - we look it here are any arguments (command or topics) and print those,
 	// otherwise, we print the main usage information
@@ -570,7 +607,7 @@ func HelpAction(program *Program, command *Command, unknownArgs []string) {
 	HelpPrinter(program)
 }
 
-// Default help printing function
+// HelpPrinter is the default help printing function
 func HelpPrinter(p *Program) {
 	if p.Description != "" {
 		fmt.Println(p.Description)

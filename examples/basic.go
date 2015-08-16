@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/gopackage/cli"
+	"github.com/badslug/cli"
 )
 
 func main() {

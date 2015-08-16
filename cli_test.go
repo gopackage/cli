@@ -2,7 +2,7 @@
 package cli_test
 
 import (
-	. "github.com/IainShigeoka/cli"
+	. "../cli"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -107,6 +107,13 @@ var _ = Describe("Argument Parsing", func() {
 			It("should return the string", func() {
 				Ω(len(normalized)).Should(Equal(1))
 				Ω(normalized[0]).Should(Equal("help"))
+			})
+		})
+		Context("with a simple number", func() {
+			normalized := Normalize([]string{"8"})
+			It("should return the number", func() {
+				Ω(len(normalized)).Should(Equal(1))
+				Ω(normalized[0]).Should(Equal("8"))
 			})
 		})
 		Context("with a single short option", func() {
