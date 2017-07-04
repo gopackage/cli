@@ -52,10 +52,6 @@ func (p *Program) SetDescription(description string) *Program {
 //
 // This method auto-registers the "version" command
 // which will print the version number when passed.
-//
-// @param {String} ver
-// @param {String} command
-// @return {Command} for chaining
 func (p *Program) SetVersion(version string, command ...string) *Program {
 	p.Version = version
 	cmd := "version"
@@ -225,9 +221,6 @@ func Normalize(args []string) (normalized []string) {
 
 // ParseNormalizedArgs parses command line `args` and selects a command based
 // on program settings and the arguments.
-//
-// @param {Array} args
-// @return {Command} for chaining
 func (p *Program) ParseNormalizedArgs(args, unknown []string) (command *Command) {
 	if len(args) > 0 {
 		name := args[0]
@@ -270,9 +263,6 @@ func (p *Program) ParseNormalizedArgs(args, unknown []string) (command *Command)
 }
 
 // OptionFor returns an option matching `arg` if any.
-//
-// @param {String} arg
-// @return {Option}
 func (p *Program) OptionFor(arg string) *Option {
 	for _, option := range p.Options {
 		if option.Short == arg || option.Long == arg {
@@ -283,9 +273,6 @@ func (p *Program) OptionFor(arg string) *Option {
 }
 
 // ParseOptions parses options from `argv` returning `argv` void of these options.
-//
-// @param {Array} argv
-// @return {Array}
 func (p *Program) ParseOptions(argv []string) (args, unknownOptions []string) {
 	literal := false
 
@@ -352,19 +339,12 @@ func (p *Program) ParseOptions(argv []string) (args, unknownOptions []string) {
 }
 
 // Argument `name` is missing.
-//
-// @param {String} name
-// @api private
 func (p *Program) missingArgument(name string) {
 	fmt.Fprintf(os.Stderr, "\n  error: missing required argument `%s'\n\n", name)
 	os.Exit(1)
 }
 
 // `Option` is missing an argument, but received `flag` or nothing.
-//
-// @param {String} option
-// @param {String} flag
-// @api private
 func (p *Program) optionMissingArgument(option *Option, flag string) {
 	if flag != "" {
 		fmt.Fprintf(os.Stderr, "\n  error: option `%s' argument missing, got `%s'\n\n", option.Flags, flag)
@@ -375,30 +355,18 @@ func (p *Program) optionMissingArgument(option *Option, flag string) {
 }
 
 // Unknown command argument
-//
-// @param {String} cmd
-// @param {String} arg
 func (p *Program) unknownArgument(cmd, arg string) {
 	fmt.Fprintf(os.Stderr, "\n  error: command `%s' has unknown argument `%s'\n\n", cmd, arg)
 	os.Exit(1)
 }
 
 // Unknown option `flag`.
-//
-// @param {String} flag
 func (p *Program) unknownOption(flag string) {
 	fmt.Fprintf(os.Stderr, "\n  error: unknown option `%s'\n\n", flag)
 	os.Exit(1)
 }
 
-/**
- * Output help information if necessary
- *
- * @param {Command} command to output help for
- * @param {Array} array of options to search for -h or --help
- * @api private
- */
-
+// outputHelpIfNecessary but only if necessary
 func (p *Program) outputHelpIfNecessary(cmd string, options []string) {
 	for _, option := range options {
 		if option == "--help" || option == "-h" {
@@ -459,6 +427,26 @@ func (c *Command) Option(flags, description string, defaultValue ...string) *Com
 	o := NewOption(c.Program, flags, description, defaultValue...)
 	c.Options = append(c.Options, o)
 	return c
+}
+
+// OptionFor returns an option matching `name` if any.
+func (c *Command) OptionFor(name string) *Option {
+	for _, option := range c.Options {
+		if option.Short == name || option.Long == name {
+			return option
+		}
+	}
+	return nil
+}
+
+// ArgFor returns an arg matching `name` if any.
+func (c *Command) ArgFor(name string) *Arg {
+	for _, arg := range c.Args {
+		if arg.Name == name {
+			return arg
+		}
+	}
+	return nil
 }
 
 func (c *Command) parseExpectedArgs(args []string) {
@@ -577,7 +565,7 @@ func (t *Topic) SetBody(body string) *Topic {
 // HelpAction is a default action used by cli to print out the standard
 // Help() message. The action can be replaced by a user-supplied implementation
 // to override the default behavior/format.
-func HelpAction(program *Program, command *Command, unknownArgs []string) {
+func HelpAction(program *Program, command *Command, _ []string) {
 	// Print help - we look it here are any arguments (command or topics) and print those,
 	// otherwise, we print the main usage information
 	if command != nil {

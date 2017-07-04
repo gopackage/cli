@@ -2,7 +2,7 @@
 package cli_test
 
 import (
-	. "../cli"
+	. "github.com/gopackage/cli"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
