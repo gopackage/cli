@@ -340,29 +340,29 @@ func (p *Program) ParseOptions(argv []string) (args, unknownOptions []string) {
 
 // Argument `name` is missing.
 func (p *Program) missingArgument(name string) {
-	fmt.Fprintf(os.Stderr, "\n  error: missing required argument `%s'\n\n", name)
+	fmt.Fprintf(os.Stderr, "\n  error: missing required argument `%s`\n\n", name)
 	os.Exit(1)
 }
 
 // `Option` is missing an argument, but received `flag` or nothing.
 func (p *Program) optionMissingArgument(option *Option, flag string) {
 	if flag != "" {
-		fmt.Fprintf(os.Stderr, "\n  error: option `%s' argument missing, got `%s'\n\n", option.Flags, flag)
+		fmt.Fprintf(os.Stderr, "\n  error: option `%s` argument missing, got `%s`\n\n", option.Flags, flag)
 	} else {
-		fmt.Fprintf(os.Stderr, "\n  error: option `%s' argument missing\n\n", option.Flags)
+		fmt.Fprintf(os.Stderr, "\n  error: option `%s` argument missing\n\n", option.Flags)
 	}
 	os.Exit(1)
 }
 
 // Unknown command argument
 func (p *Program) unknownArgument(cmd, arg string) {
-	fmt.Fprintf(os.Stderr, "\n  error: command `%s' has unknown argument `%s'\n\n", cmd, arg)
+	fmt.Fprintf(os.Stderr, "\n  error: command `%s` has unknown argument `%s`\n\n", cmd, arg)
 	os.Exit(1)
 }
 
 // Unknown option `flag`.
 func (p *Program) unknownOption(flag string) {
-	fmt.Fprintf(os.Stderr, "\n  error: unknown option `%s'\n\n", flag)
+	fmt.Fprintf(os.Stderr, "\n  error: unknown option `%s`\n\n", flag)
 	os.Exit(1)
 }
 
@@ -459,7 +459,7 @@ func (c *Command) parseExpectedArgs(args []string) {
 				// No optional arguments before required arguments
 				for _, prev := range c.Args {
 					if !prev.Required {
-						fmt.Fprintf(os.Stderr, "\n  error: required argument `%s' not allowed after optional argument `%s'", arg, prev.Name)
+						fmt.Fprintf(os.Stderr, "\n  error: required argument `%s` not allowed after optional argument `%s`", arg, prev.Name)
 						os.Exit(1)
 					}
 				}
