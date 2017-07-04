@@ -396,9 +396,11 @@ func (p *Program) Help() {
 func NewCommand(program *Program, command, description string) *Command {
 	c := &Command{Program: program, Description: description}
 	c.Flags = command
-	args := regexp.MustCompile(` +`).Split(command, -1)
-	c.Command = args[0]
-	c.parseExpectedArgs(args[0:])
+	if len(command) > 0 {
+		args := regexp.MustCompile(` +`).Split(command, -1)
+		c.Command = args[0]
+		c.parseExpectedArgs(args[0:])
+	}
 	return c
 }
 
@@ -451,18 +453,20 @@ func (c *Command) ArgFor(name string) *Arg {
 
 func (c *Command) parseExpectedArgs(args []string) {
 	for _, arg := range args {
-		switch arg[0:1] {
-		case "<":
-			// No optional arguments before required arguments
-			for _, prev := range c.Args {
-				if !prev.Required {
-					fmt.Fprintf(os.Stderr, "\n  error: required argument `%s' not allowed after optional argument `%s'", arg, prev.Name)
-					os.Exit(1)
+		if len(arg) > 0 {
+			switch arg[0:1] {
+			case "<":
+				// No optional arguments before required arguments
+				for _, prev := range c.Args {
+					if !prev.Required {
+						fmt.Fprintf(os.Stderr, "\n  error: required argument `%s' not allowed after optional argument `%s'", arg, prev.Name)
+						os.Exit(1)
+					}
 				}
+				c.Args = append(c.Args, &Arg{Required: true, Name: arg[1 : len(arg)-1]})
+			case "[":
+				c.Args = append(c.Args, &Arg{Required: false, Name: arg[1 : len(arg)-1]})
 			}
-			c.Args = append(c.Args, &Arg{Required: true, Name: arg[1 : len(arg)-1]})
-		case "[":
-			c.Args = append(c.Args, &Arg{Required: false, Name: arg[1 : len(arg)-1]})
 		}
 	}
 }
@@ -573,7 +577,13 @@ func HelpAction(program *Program, command *Command, _ []string) {
 
 		// Search commands for a match
 		helpCommand := program.Commands[cmd]
-		if helpCommand != nil {
+		if helpCommand != nil && helpCommand.Command != "" {
+			fmt.Print("Usage: ", program.Exe)
+			if len(helpCommand.Options) > 0 {
+				fmt.Print(" [options]")
+			}
+			fmt.Println(" " + helpCommand.Flags)
+			fmt.Println()
 			if helpCommand.Body != "" {
 				fmt.Println(helpCommand.Body)
 			} else {
@@ -584,6 +594,13 @@ func HelpAction(program *Program, command *Command, _ []string) {
 		// Search topics for a match
 		helpTopic := program.Topics[cmd]
 		if helpTopic != nil {
+			fmt.Println(helpTopic.Topic)
+			line := make([]string, len(helpTopic.Topic))
+			for i := range helpTopic.Topic {
+				line[i] = "="
+			}
+			fmt.Println(line)
+			fmt.Println()
 			if helpTopic.Body != "" {
 				fmt.Println(helpTopic.Body)
 			} else {
@@ -597,18 +614,23 @@ func HelpAction(program *Program, command *Command, _ []string) {
 
 // HelpPrinter is the default help printing function
 func HelpPrinter(p *Program) {
+	defaultCommand, hasDefaultCommand := p.Commands[""]
+
 	if p.Description != "" {
 		fmt.Println(p.Description)
 		fmt.Println()
 	}
-	fmt.Println("Usage:")
-	fmt.Println()
-	fmt.Print("         " + p.Exe)
+
+	fmt.Print("Usage: ", p.Exe)
 	if len(p.Options) > 0 {
 		fmt.Print(" [options]")
 	}
 	if len(p.Commands) > 0 {
-		fmt.Print(" command")
+		if hasDefaultCommand {
+			fmt.Print(" [command]")
+		} else {
+			fmt.Print(" <command>")
+		}
 	}
 	fmt.Println()
 	fmt.Println()
@@ -687,6 +709,15 @@ func HelpPrinter(p *Program) {
 		}
 		fmt.Println()
 		fmt.Println("Use \"" + p.Exe + " help [topic]\" for more information about that topic.")
+		fmt.Println()
+	}
+
+	if hasDefaultCommand {
+		// We have a default command
+		fmt.Println("Default command:", defaultCommand.Description)
+		if defaultCommand.Body != "" {
+			fmt.Println(defaultCommand.Body)
+		}
 		fmt.Println()
 	}
 }
