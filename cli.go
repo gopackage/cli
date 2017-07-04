@@ -86,7 +86,8 @@ func (p *Program) Option(flags, description string, defaultValue ...string) *Pro
 	return p
 }
 
-// Command adds a command/mode for the program to execute.
+// Command adds a command/mode for the program to execute. Use the command
+// `*` to register a default command (otherwise the default will be the help command).
 func (p *Program) Command(command, description string) *Command {
 
 	c := NewCommand(p, command, description)
@@ -392,7 +393,9 @@ func (p *Program) Help() {
 
 // -----------------------------------------------------------------------
 
-// NewCommand creates a new command for a given program.
+// NewCommand creates a new command for a given program. Use the command string
+// `*` to indicate a default command that is run when no command is specied.
+// By default the default command is the help command.
 func NewCommand(program *Program, command, description string) *Command {
 	c := &Command{Program: program, Description: description}
 	c.Flags = command
@@ -614,7 +617,7 @@ func HelpAction(program *Program, command *Command, _ []string) {
 
 // HelpPrinter is the default help printing function
 func HelpPrinter(p *Program) {
-	defaultCommand, hasDefaultCommand := p.Commands[""]
+	defaultCommand, hasDefaultCommand := p.Commands["*"]
 
 	if p.Description != "" {
 		fmt.Println(p.Description)
@@ -685,6 +688,10 @@ func HelpPrinter(p *Program) {
 		fmt.Println("The commands are:")
 		fmt.Println()
 		for _, command := range p.Commands {
+			if command.Flags == "*" {
+				// Skip default command in command list - we display it at the bottom
+				continue
+			}
 			fmt.Print(padding)
 			fmt.Print(command.Flags)
 			if len(command.Flags) < columnSize {

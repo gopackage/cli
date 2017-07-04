@@ -6,9 +6,13 @@
 
     $ go get github.com/gopackage/cli
 
+## Default Command
+
+A default command can be registered using the `*` command string.
+
 ## Option parsing
 
- Options with commander are defined with the `.Option()` method, also serving as documentation for the options. The example below parses args and options from `os.Args` and sets the `*.Value` for corresponding Options and Args on the program or command.
+ Options with cli are defined with the `.Option()` method, also serving as documentation for the options. The example below parses args and options from `os.Args` and sets the `*.Value` for corresponding Options and Args on the program or command.
 
 ```go
 package main
@@ -138,7 +142,7 @@ run using the standard Go testing functionality `go test .`
 
 (The MIT License)
 
-Copyright (c) 2014 Iain Shigeoka
+Copyright (c) 2014-2017 Iain Shigeoka
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
