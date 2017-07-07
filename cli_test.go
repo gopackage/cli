@@ -210,7 +210,7 @@ var _ = Describe("Argument Parsing", func() {
 		})
 	})
 	Describe("ParseNormalizedArgs", func() {
-		Context("with a configured program", func() {
+		Context("with a configured single argument program", func() {
 
 			program := New()
 			program.SetDescription("Device troubleshooting tool")
@@ -227,12 +227,36 @@ var _ = Describe("Argument Parsing", func() {
 
 				command := program.ParseNormalizedArgs([]string{"tcp", "8080"}, []string{})
 
+				Ω(command).ShouldNot(BeNil())
 				Ω(command.Command).Should(Equal("tcp"))
 				Ω(len(command.Args)).Should(Equal(1))
 				Ω(command.Args[0].Name).Should(Equal("port"))
 				Ω(command.Args[0].Value).Should(Equal("8080"))
+				Ω(command.ArgFor("port").IntValue(0)).Should(Equal(8080))
+			})
+		})
+		Context("with a configured two argument program", func() {
+
+			program := New()
+			program.SetDescription("Status display tool")
+			program.Option("-v, --verbose", "display verbose information")
+			program.Command("status <color1> <color2>", "display two colors on the status board").Option("-t, --timeout", "maximum time the test will wait for response")
+			program.Topic("path", "setting the path for reading")
+
+			It("should parse command with required argument", func() {
+
+				command := program.ParseArgs([]string{"exe", "status", "#RGB", "#RRGGBB"})
+
+				Ω(command).ShouldNot(BeNil())
+				Ω(command.Command).Should(Equal("status"))
+				Ω(len(command.Args)).Should(Equal(2))
+				Ω(command.Args[0].Name).Should(Equal("color1"))
+				Ω(command.Args[0].Value).Should(Equal("#RGB"))
+				Ω(command.Args[1].Name).Should(Equal("color2"))
+				Ω(command.Args[1].Value).Should(Equal("#RRGGBB"))
+				Ω(command.ArgFor("color1").Value).Should(Equal("#RGB"))
+				Ω(command.ArgFor("color2").Value).Should(Equal("#RRGGBB"))
 			})
 		})
 	})
-
 })
